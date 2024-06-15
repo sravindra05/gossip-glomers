@@ -26,7 +26,9 @@ func (n *nodeWrapper) propagate(message int) error {
 	}
 
 	for _, neighbour := range neighbours {
-		err := n.Send(neighbour.(string), requestBody)
+		err := n.RPC(neighbour.(string), requestBody, func(msg maelstrom.Message) error {
+			return nil
+		})
 		if err != nil {
 			return fmt.Errorf("error sending message to neighbours: %w", err)
 		}
@@ -67,6 +69,10 @@ func main() {
 		}
 
 		return n.Reply(msg, body)
+	})
+
+	n.Handle("broadcast_ok", func(msg maelstrom.Message) error {
+		return nil
 	})
 
 	n.Handle("read", func(msg maelstrom.Message) error {
