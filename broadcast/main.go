@@ -63,6 +63,7 @@ func main() {
 		body["type"] = "broadcast_ok"
 		delete(body, "message")
 
+		// Can we make this better?
 		err := n.propagate(message)
 		if err != nil {
 			return err
