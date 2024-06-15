@@ -1,5 +1,5 @@
 # gossip-glomers
-A repository containing my solutions to the distributed systems challenge by fly.io
+A repository containing my solutions to the distributed systems challenge by [fly.io]([url](https://fly.io/dist-sys/))
 
 # Try it out
 Each of the challenges have an associated make target that builds and runs a docker image for the challenge in question so I don't get to claim it runs only on my machine :) However, it goes without saying that `make` and `docker` are prerequisites.
