@@ -96,7 +96,6 @@ func main() {
 			return err
 		}
 
-		// Unclear what to do here with this information, ignoring...
 		body["type"] = "topology_ok"
 
 		topology, ok := body["topology"].(map[string]any)
