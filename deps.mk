@@ -1,4 +1,4 @@
-.PHONY: deps run-echo
+.PHONY: deps
 
 MAELSTROM_BIN_PATH ?= ./maelstrom/maelstrom
 

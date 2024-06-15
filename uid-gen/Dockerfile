@@ -3,14 +3,14 @@ FROM golang:1.22
 WORKDIR /uid-gen
 
 COPY deps.mk ./
-COPY ./uid-gen/go.mod ./uid-gen/go.sum ./
+COPY ./uid-gen/go.mod ./uid-gen/go.sum ./uid-gen/Makefile ./
 
 RUN go mod download
 
-COPY ./uid-gen .
-
 # get maelstrom dependencies
 RUN make deps
+
+COPY ./uid-gen .
 
 # install binary
 RUN go install .
