@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"log"
 	"sync"
 
@@ -11,11 +13,30 @@ import (
 type nodeWrapper struct {
 	*maelstrom.Node
 	mu       sync.RWMutex
-	messages []int
+	messages map[int]bool
+	topology map[string]any
+}
+
+func (n *nodeWrapper) propagate(message int) error {
+	neighbours := n.topology[n.ID()].([]interface{})
+
+	requestBody := map[string]any{
+		"type":    "broadcast",
+		"message": message,
+	}
+
+	for _, neighbour := range neighbours {
+		err := n.Send(neighbour.(string), requestBody)
+		if err != nil {
+			return fmt.Errorf("error sending message to neighbours: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func main() {
-	n := nodeWrapper{Node: maelstrom.NewNode()}
+	n := nodeWrapper{Node: maelstrom.NewNode(), messages: map[int]bool{}}
 
 	n.Handle("broadcast", func(msg maelstrom.Message) error {
 		var body map[string]any
@@ -23,12 +44,27 @@ func main() {
 			return err
 		}
 
+		// https://stackoverflow.com/a/29690346
+		message := int(body["message"].(float64))
+
+		// if we have seen this message before then do nothing
+		if _, ok := n.messages[message]; ok {
+			body["type"] = "broadcast_ok"
+			delete(body, "message")
+			return n.Reply(msg, body)
+		}
+
 		n.mu.Lock()
-		defer n.mu.Unlock()
-		n.messages = append(n.messages, int(body["message"].(float64)))
+		n.messages[message] = true
+		n.mu.Unlock()
 
 		body["type"] = "broadcast_ok"
 		delete(body, "message")
+
+		err := n.propagate(message)
+		if err != nil {
+			return err
+		}
 
 		return n.Reply(msg, body)
 	})
@@ -42,8 +78,14 @@ func main() {
 		n.mu.RLock()
 		defer n.mu.RUnlock()
 
+		var messages []int
+
+		for key, _ := range n.messages {
+			messages = append(messages, key)
+		}
+
 		body["type"] = "read_ok"
-		body["messages"] = n.messages
+		body["messages"] = messages
 
 		return n.Reply(msg, body)
 	})
@@ -56,6 +98,13 @@ func main() {
 
 		// Unclear what to do here with this information, ignoring...
 		body["type"] = "topology_ok"
+
+		topology, ok := body["topology"].(map[string]any)
+		if !ok {
+			return errors.New("failed to decode topology")
+		}
+		n.topology = topology
+
 		delete(body, "topology")
 
 		return n.Reply(msg, body)
